@@ -18,7 +18,7 @@ Installation
 ------------
 
 To install, clone the repo.
-Then load the extension from developer mode, as described [https://developer.chrome.com/extensions/getstarted#unpacked](here).
+Then load the extension from developer mode, as described [here](https://developer.chrome.com/extensions/getstarted#unpacked).
 
 License
 -------
