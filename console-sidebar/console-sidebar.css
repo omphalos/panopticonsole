@@ -1,0 +1,6 @@
+/* TODO are these resets necessary? */
+body { margin: 0; }
+*:focus { outline: none; }
+#panopticonsole-message { margin-left: 10px; }
+#console-messages { overflow: auto; }
+.status-bar-item.checkbox { margin-top: 5px; }

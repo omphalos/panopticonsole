@@ -1,0 +1,54 @@
+<html>
+<head>
+  <link rel="stylesheet" href="console-sidebar.css">
+  <link rel="stylesheet" href="/vendor/blink/inspectorStyle.css">
+  <link rel="stylesheet" href="/vendor/blink/inspectorCommon.css">
+</head>
+<body>
+  <div class="console-status-bar">
+    <button
+      id="panopticonsole-refresh-locals"
+      class="refresh status-bar-item"
+      title="Refresh locals.">
+      <div class="glyph"></div>
+    </button>
+    <label
+      id="auto-instrument-label"
+      class="status-bar-item checkbox"
+      title="Automatically instrument code every page navigation/reload.">
+      <input id="auto-instrument" type="checkbox">Auto-instrument
+    </label>
+    <label
+      id="cache-label"
+      class="status-bar-item checkbox"
+      title="Utilize session storage to cache instrumentations.">
+      <input id="cache" type="checkbox">Cache
+    </label>
+  </div>
+  <div id="console-messages" class="monospace">
+    <div id="console-prompt"
+      class="source-code text-prompt"
+      spellcheck="false"></div>
+    <div id="panopticonsole-message">
+      Page not instrumented. Press
+      <a href="#"
+        id="panopticonsole-reload-page"
+        title="Reload with instrumentation">instrument</a>
+      to reload with an instrumented version of your page.
+    </div>
+  </div>
+  <script src="/vendor/blink/common/utilities.js"></script>
+  <script src="/vendor/blink/common/WebInspector.js"></script>
+  <script src="/vendor/blink/common/Object.js"></script>
+  <script src="/vendor/blink/common/UIString.js"></script>
+  <script src="/vendor/blink/ui/UIUtils.js"></script>
+  <script src="/vendor/blink/ui/DOMExtension.js"></script>
+  <script src="/vendor/blink/ui/TextPrompt.js"></script>
+  <script src="/vendor/blink/ui/SuggestBox.js"></script>
+  <script src="/vendor/blink/ui/Dialog.js"></script>
+  <script src="/vendor/blink/host/Platform.js"></script>
+  <script src="/vendor/blink/Runtime.js"></script>
+  <script src="/vendor/blink/host/InspectorFrontendHost.js"></script>
+  <script src="console-sidebar.js"></script>
+</body>
+</html>

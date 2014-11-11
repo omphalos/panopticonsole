@@ -1,0 +1,23 @@
+{
+    "extensions": [
+        {
+            "type": "@WebInspector.ExtensionServerAPI",
+            "className": "WebInspector.ExtensionServer"
+        }
+    ],
+    "dependencies": [
+        "components",
+        "elements",
+        "network",
+        "sources",
+        "audits"
+    ],
+    "scripts": [
+        "ExtensionAPI.js",
+        "ExtensionRegistryStub.js",
+        "ExtensionAuditCategory.js",
+        "ExtensionServer.js",
+        "ExtensionPanel.js",
+        "ExtensionView.js"
+    ]
+}

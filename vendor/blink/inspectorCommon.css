@@ -1,0 +1,74 @@
+html {
+    height: 100%;
+}
+
+body {
+    cursor: default;
+    position: relative;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    font-family: Lucida Grande, sans-serif;
+    font-size: 12px;
+    margin: 0;
+    tab-size: 4;
+    -webkit-user-select: none;
+    color: #222;
+}
+
+body.platform-linux {
+  color: rgb(48, 57, 66);
+  font-family: Ubuntu, Arial, sans-serif;
+}
+
+body.platform-mac {
+  color: rgb(48, 57, 66);
+  font-family: 'Lucida Grande', sans-serif;
+}
+
+body.platform-windows {
+  font-family: 'Segoe UI', Tahoma, sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+:focus {
+    outline: none;
+}
+
+img {
+    -webkit-user-drag: none;
+}
+
+iframe,
+a img {
+    border: none;
+}
+
+iframe.view {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.monospace {
+    font-size: 10px !important;
+    font-family: monospace;
+}
+
+.highlighted-search-result {
+    border-radius: 1px;
+    padding: 1px;
+    margin: -1px;
+    background-color: rgba(255, 255, 0, 0.8);
+}
