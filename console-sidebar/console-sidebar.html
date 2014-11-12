@@ -1,13 +1,13 @@
 <html>
 <head>
-  <link rel="stylesheet" href="console-sidebar.css">
   <link rel="stylesheet" href="/vendor/blink/inspectorStyle.css">
   <link rel="stylesheet" href="/vendor/blink/inspectorCommon.css">
+  <link rel="stylesheet" href="console-sidebar.css">
 </head>
 <body>
   <div class="console-status-bar">
     <button
-      id="panopticonsole-refresh-locals"
+      id="refresh-locals"
       class="refresh status-bar-item"
       title="Refresh locals.">
       <div class="glyph"></div>
@@ -21,7 +21,7 @@
     <label
       id="cache-label"
       class="status-bar-item checkbox"
-      title="Utilize session storage to cache instrumentations.">
+      title="Utilize session storage to speed up instrumentation.">
       <input id="cache" type="checkbox">Cache
     </label>
   </div>
@@ -29,10 +29,10 @@
     <div id="console-prompt"
       class="source-code text-prompt"
       spellcheck="false"></div>
-    <div id="panopticonsole-message">
+    <div id="message">
       Page not instrumented. Press
       <a href="#"
-        id="panopticonsole-reload-page"
+        id="reload-page"
         title="Reload with instrumentation">instrument</a>
       to reload with an instrumented version of your page.
     </div>
