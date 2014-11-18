@@ -2,9 +2,10 @@
 <head>
   <link rel="stylesheet" href="/vendor/blink/inspectorStyle.css">
   <link rel="stylesheet" href="/vendor/blink/inspectorCommon.css">
+  <link rel="stylesheet" href="/vendor/blink/suggestBox.css">
   <link rel="stylesheet" href="console-sidebar.css">
 </head>
-<body>
+<body class="view">
   <div class="console-status-bar">
     <button
       id="refresh-locals"
@@ -46,9 +47,15 @@
   <script src="/vendor/blink/ui/TextPrompt.js"></script>
   <script src="/vendor/blink/ui/SuggestBox.js"></script>
   <script src="/vendor/blink/ui/Dialog.js"></script>
+  <script src="/vendor/blink/ui/Context.js"></script>
   <script src="/vendor/blink/host/Platform.js"></script>
   <script src="/vendor/blink/Runtime.js"></script>
+  <script src="/vendor/blink/components/ExecutionContextSelector.js"></script>
   <script src="/vendor/blink/host/InspectorFrontendHost.js"></script>
+  <script src="/vendor/blink/sdk/InspectorBackend.js"></script>
+  <script src="/vendor/blink/sdk/Target.js"></script>
+  <script src="/vendor/blink/sdk/RuntimeModel.js"></script>
+  <script src="/buildRemoteEval.js"></script>
   <script src="console-sidebar.js"></script>
 </body>
 </html>

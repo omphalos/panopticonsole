@@ -35,7 +35,7 @@ sources.createSidebarPane(
 
 function detectScopeChange() {
   var readScope = 'JSON.stringify((' + getScopeLocation + ')())'
-    , code = buildRemoteCodeBlock(readScope, { return: true })
+    , code = buildRemoteEval(readScope, { return: true })
   inspectedWindow.eval(code, function(nextScopeLoc, error) {
     if(error) return console.error(error)
     //console.log('nextScopeLoc', nextScopeLoc, 'from', sessionStorage.scopeLoc)
@@ -53,7 +53,7 @@ function getScopeLocation() {
 }
 
 function renderLocalsSidebar() {
-  var localsExpression = buildRemoteCodeBlock(
+  var localsExpression = buildRemoteEval(
     '(' + getLocalsObject + ')()', { return: true })
   localsSidebar.setExpression(localsExpression)
 }
@@ -86,8 +86,6 @@ function getLocalsObject() {
 ///////////////////////////
 
 addEventListener('storage', function(evt) {
-  if(evt.key !== 'location')
-    console.log('index:storage', evt.key)
   // Event handling
   if(evt.key === 'trigger' && evt.newValue === 'reload-page')
     reloadWithInstrumentation()
@@ -95,7 +93,7 @@ addEventListener('storage', function(evt) {
     renderLocalsSidebar()
   if(evt.key === 'userCode' && evt.newValue) {
     console.log('executing', evt.newValue)
-    var code = buildRemoteCodeBlock(evt.newValue, { log: true })
+    var code = buildRemoteEval(evt.newValue, { log: true })
     inspectedWindow.eval(code, function(result, error) {
       if(!error) return
       var errorString = 'console.error(' + JSON.stringify(error.value) + ')'
@@ -105,11 +103,7 @@ addEventListener('storage', function(evt) {
   // Rendering
 }, false)
 
-sources.onSelectionChanged.addListener(function(location) {
-  sessionStorage.location = JSON.stringify(location)
-  // console.log('location changed to', sessionStorage.location)
-  detectScopeChange()
-})
+sources.onSelectionChanged.addListener(detectScopeChange)
 
 /////////////////////////////////
 // Handling resource committed //
@@ -179,96 +173,22 @@ function reloadWithInstrumentation() {
 }
 
 network.onNavigated.addListener(function() {
-  console.log('navigated')
   if(isOwnReload) {
-    console.log('setting isOwnReload to false')
+    //console.log('setting isOwnReload to false')
     isOwnReload = false
-    console.log('setting isInstrumented to true from', sessionStorage.isInstrumented)
+    //console.log('setting isInstrumented to true from', sessionStorage.isInstrumented)
     sessionStorage.sessionStarted = true
     sessionStorage.isInstrumented = true
     renderLocalsSidebar()
   } else if(sessionStorage.sessionStarted && localStorage.autoInstrument) {
-    console.log('reloading after uninstrumented navigation')
+    //console.log('reloading after uninstrumented navigation')
     reloadWithInstrumentation()
   } else {
-    console.log('deleting isInstrumented from', sessionStorage.isInstrumented)
+    //console.log('deleting isInstrumented from', sessionStorage.isInstrumented)
     delete sessionStorage.isInstrumented
     renderLocalsSidebar()
   }
 })
-
-//////////////////////////
-// Remote eval in scope //
-//////////////////////////
-
-function logError(error) {
-  if(!error) return
-  console.warn(error.value)
-  var errorString = JSON.stringify(error.value)
-  var logCode = 'console.error(' + errorString + ')'
-  inspectedWindow.eval(logCode, logIfError)
-}
-
-function buildRemoteCodeBlock(str, options) {
-  return ('(' + remoteScopeEval + ')(' + 
-    (JSON.stringify(str)) + ',' +
-    (sessionStorage.location || 'null') + ',' +
-    JSON.stringify(options) + ')')
-}
-
-function remoteScopeEval(str, loc, options) {
-  var warned = false
-
-  if(!window['\u2182'] && options.log) {
-    console.log('Code has not been instrumented. Running in global scope.')
-    warned = true // TODO refactor this
-  }
-  var references = window['\u2182'] || { globals: [] }
-    , scopes = []
-
-  for(var key in references) {
-    if(!loc || !loc.url) break
-    if(key.indexOf('@') < 0) continue
-    var ref = window['\u2182'][key]
-      , splitAt = key.lastIndexOf('@')
-      , refUrl = key.substring(0, splitAt)
-      , refLoc = ref.loc
-    if(refUrl !== loc.url && refUrl + '.inst' !== loc.url) continue
-    var refStartLine = refLoc[0]
-      , refStartColumn = refLoc[1]
-      , refEndLine = refLoc[2]
-      , refEndColumn = refLoc[3]
-    var isAtOrAfter = loc.startLine > refStartLine ||
-      (loc.startLine === refStartLine && loc.startColumn >= refStartColumn)
-    var isAtOrBefore = loc.endLine < refEndLine ||
-      (loc.endLine === refEndLine && loc.endColumn <= refEndColumn)
-    if(isAtOrBefore && isAtOrAfter)
-      scopes.push(ref)
-  }
-
-  var uniqueGlobalVars = {}
-  references.globals.forEach(function(g) { uniqueGlobalVars[g] = 1 })
-  uniqueGlobalVars = Object.keys(uniqueGlobalVars)
-
-  scopes.push({
-    loc: null,
-    evalFn: window.eval,
-    vars: uniqueGlobalVars
-  })
-  var evalFn = scopes[0].evalFn || window.eval
-
-  if(!scopes[0].evalFn && options.log && !warned)
-    console.warn('No calls recorded at this location. Running in global scope.')
-
-  references.scopes = scopes
-  references.evalFn = evalFn
-
-  var result = evalFn(str)
-  if(options.log)
-    console.log(result)
-  if(options.return)
-    return result
-}
 
 ///////////////
 // Utilities //
@@ -280,6 +200,14 @@ function endsWith(str, end) {
 
 function logIfError(result, error) {
   error && console.error(error)
+}
+
+function logError(error) {
+  if(!error) return
+  console.warn(error.value)
+  var errorString = JSON.stringify(error.value)
+  var logCode = 'console.error(' + errorString + ')'
+  inspectedWindow.eval(logCode, logIfError)
 }
 
 })()
