@@ -6,36 +6,46 @@
   <link rel="stylesheet" href="console-sidebar.css">
 </head>
 <body class="view">
-  <div class="console-status-bar">
+  <div id="consoleStatusBar" class="console-status-bar">
     <button
-      id="refresh-locals"
-      class="refresh status-bar-item"
-      title="Refresh locals.">
+      id="settings"
+      class="settings-status-bar-item status-bar-item"
+      title="Settings">
       <div class="glyph"></div>
     </button>
-    <label
-      id="auto-instrument-label"
-      class="status-bar-item checkbox"
-      title="Automatically instrument code every page navigation/reload.">
-      <input id="auto-instrument" type="checkbox">Auto-instrument
-    </label>
-    <label
-      id="cache-label"
-      class="status-bar-item checkbox"
-      title="Utilize session storage to speed up instrumentation.">
-      <input id="cache" type="checkbox">Cache
-    </label>
+    <button
+      id="refreshScopeVariables"
+      class="refresh status-bar-item"
+      title="Refresh scope variables">
+      <div class="glyph"></div>
+    </button>
   </div>
   <div id="console-messages" class="monospace">
     <div id="console-prompt"
       class="source-code text-prompt"
       spellcheck="false"></div>
-    <div id="message">
-      Page not instrumented. Press
-      <a href="#"
-        id="reload-page"
-        title="Reload with instrumentation">instrument</a>
-      to reload with an instrumented version of your page.
+  </div>
+  <div id="settingsContainer">
+    <div id="settingsView" class="view vbox">
+      <h3>Settings
+        <div id="closeSettings" class="close-button-gray"></div>
+      </h3>
+      <p>
+        <label
+          id="autoInstrumentLabel"
+          class="status-bar-item checkbox"
+          title="Automatically instrument code every page navigation/reload.">
+          <input id="autoInstrument" type="checkbox">Auto-instrument
+        </label>
+      </p>
+      <p>
+        <label
+          id="cacheLabel"
+          class="status-bar-item checkbox"
+          title="Utilize session storage to speed up instrumentation.">
+          <input id="cache" type="checkbox">Cache
+        </label>
+      </p>
     </div>
   </div>
   <script src="/vendor/blink/common/utilities.js"></script>
@@ -55,6 +65,9 @@
   <script src="/vendor/blink/sdk/InspectorBackend.js"></script>
   <script src="/vendor/blink/sdk/Target.js"></script>
   <script src="/vendor/blink/sdk/RuntimeModel.js"></script>
+  <script src="/bus.js"></script>
+  <script src="/ViewModel.js"></script>
+  <script src="/PanopticonsoleViewModel.js"></script>
   <script src="/buildRemoteEval.js"></script>
   <script src="console-sidebar.js"></script>
 </body>

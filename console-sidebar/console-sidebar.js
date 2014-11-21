@@ -6,81 +6,80 @@ var devtools = chrome.devtools
   , inspectedWindow = devtools.inspectedWindow
   , sources = devtools.panels.sources
   , history = JSON.parse(localStorage.history || '[]')
-  , consolePrompt = document.getElementById('console-prompt')
-  , reloadPage = document.getElementById('reload-page')
-  , message = document.getElementById('message')
-  , body = document.body
-  , autoInstrument = document.getElementById('auto-instrument')
-  , autoInstrumentLabel = document.getElementById('auto-instrument-label')
-  , cache = document.getElementById('cache')
-  , cacheLabel = document.getElementById('cache-label')
-  , refreshLocals = document.getElementById('refresh-locals')
   , contextSelector = WebInspector.ExecutionContextSelector
   , completions = contextSelector.completionsForTextPromptInCurrentContext
-  , prompt = new WebInspector.TextPromptWithHistory(completions)
+  , consolePrompt = document.getElementById('console-prompt')
 
+////////////
+// prompt //
+////////////
+
+var prompt = new WebInspector.TextPromptWithHistory(completions)
 prompt.setSuggestBoxEnabled(true)
 prompt.renderAsBlock();
-prompt.attach(document.getElementById('console-prompt'))
+prompt.attach(consolePrompt)
 prompt.proxyElement.addEventListener('keydown', onKeyDown, false)
 prompt.setHistoryData(history)
 
-// Rendering
-var renderFns = {
+///////////////
+// ViewModel //
+///////////////
 
-  isInstrumented: function() {
-    if(sessionStorage.isInstrumented) {
-      message.style.display = 'none'
-      refreshLocals.style.display = ''
-      consolePrompt.style.display = ''
-    } else {
-      message.style.display = ''
-      refreshLocals.style.display = 'none'
-      consolePrompt.style.display = 'none'
-    }
-  },
-
-  sessionStarted: function() {
-    cacheLabel.style.display = autoInstrumentLabel.style.display =
-      sessionStorage.sessionStarted ? 'block' : 'none'
-  },
-
-  autoInstrument: function() {
-    autoInstrument.checked = localStorage.autoInstrument ? 'checked' : ''
-  },
-
-  cache: function() {
-    cache.checked = localStorage.cache ? 'checked' : ''
-  }
-}
-
-addEventListener('storage', function(evt) {
-  var renderFn = renderFns[evt.key]
-  renderFn && renderFn()
-}, false)
-
-Object.keys(renderFns).forEach(function(key) {
-  renderFns[key]()
+var viewModel = new PanopticonsoleViewModel({
+  autoInstrument: { render: renderAutoInstrument },
+  cache: { render: renderCache },
+  isConfiguring: { initial: false, render: renderIsConfiguring }
 })
 
-// Event handlers
+///////////////
+// Rendering //
+///////////////
+
+function renderAutoInstrument() {
+  autoInstrument.checked = viewModel.autoInstrument ? 'checked' : ''
+}
+
+function renderCache() {
+  cache.checked = viewModel.cache ? 'checked' : ''
+}
+
+function renderIsConfiguring() {
+  settingsContainer.style.display = viewModel.isConfiguring ? 'block' : 'none'
+}
+
+////////////////////
+// Event handlers //
+////////////////////
+
+refreshScopeVariables.addEventListener('click', function() {
+  bus.trigger('refreshScopeVariables')
+})
+
+settings.addEventListener('click', function() {
+  viewModel.isConfiguring = true
+})
+
+closeSettings.addEventListener('click', function() {
+  closeAndFocus()
+})
+
 autoInstrument.addEventListener('change', function(evt) {
-  localStorage.autoInstrument = autoInstrument.checked ? true : ''
+  viewModel.autoInstrument = !!autoInstrument.checked
 })
 
 cache.addEventListener('change', function(evt) {
-  localStorage.cache = cache.checked ? true : ''
+  viewModel.cache = !!cache.checked
 })
 
-refreshLocals.addEventListener('click', function() {
-  delete sessionStorage.trigger
-  sessionStorage.trigger = 'refresh-locals'
+document.body.addEventListener('click', function(evt) {
+  consolePrompt.focus()
 })
 
-reloadPage.addEventListener('click', function() {
-  delete sessionStorage.trigger
-  sessionStorage.trigger = 'reload-page'
-})
+function closeAndFocus() {
+  if(!viewModel.isConfiguring) return
+  viewModel.isConfiguring = false
+  consolePrompt.focus()
+}
 
 function onKeyDown(event) {
   if (isEnterKey(event)) {
@@ -101,36 +100,26 @@ function enterKeyPressed(event) {
   if (!str.length) return
   prompt.text = ''
 
-  sessionStorage.userCode = ''
-  sessionStorage.userCode = str
+  bus.trigger('userCode', str)
   prompt.pushHistoryItem(str)
   localStorage.history = JSON.stringify(history.slice(0, 30))
 }
 
-function getSelectedCallFrameVariablesRemotely() {
-  var root = window['\u2182']
-    , vars = { 'this': true }
-  root.scopes.forEach(function(scope) {
-    scope.vars.forEach(function(v) { vars[v] = true })
-  })
-  Object.keys(window).forEach(function(windowKey) {
-    vars[windowKey] = true
-  })
-  return vars
-}
+///////////////////////////
+// Autocomplete plumbing //
+///////////////////////////
 
-// Autocomplete
-function getSelectedCallFrameVariables(callback) {
+var executionContext = new WebInspector.ExecutionContext({
+  runtimeAgent: function() { return { releaseObjectGroup: function() {} } },
+  debuggerModel: {
+    selectedCallFrame: function() { return {} },
+    evaluateOnSelectedCallFrame: evaluateOnSelectedCallFrame,
+    getSelectedCallFrameVariables: getSelectedCallFrameVariables,
+  }
+})
 
-  var remoteEval = buildRemoteEval(
-    '(' + getSelectedCallFrameVariablesRemotely + ')()',
-    { return: true })
-
-  inspectedWindow.eval(remoteEval, function(result, error) {
-    if(error) return console.error(error)
-    callback(result)
-  })
-}
+WebInspector.context.setFlavor(WebInspector.ExecutionContext, executionContext)
+WebInspector.Dialog.setModalHostView({ element: document.body })
 
 function evaluateOnSelectedCallFrame() {
 
@@ -163,18 +152,28 @@ function evaluateOnSelectedCallFrame() {
   }
 }
 
-var targetStub = {
-  runtimeAgent: function() { return { releaseObjectGroup: function() {} } },
-  debuggerModel: {
-    selectedCallFrame: function() { return {} },
-    getSelectedCallFrameVariables: getSelectedCallFrameVariables,
-    evaluateOnSelectedCallFrame: evaluateOnSelectedCallFrame
-  }
+function getSelectedCallFrameVariables(callback) {
+
+  var remoteEval = buildRemoteEval(
+    '(' + getSelectedCallFrameVariablesRemotely + ')()',
+    { return: true })
+
+  inspectedWindow.eval(remoteEval, function(result, error) {
+    if(error) return console.error(error)
+    callback(result)
+  })
 }
 
-var executionContext = new WebInspector.ExecutionContext(targetStub)
-WebInspector.context.setFlavor(WebInspector.ExecutionContext, executionContext)
-
-WebInspector.Dialog.setModalHostView({ element: document.body })
+function getSelectedCallFrameVariablesRemotely() {
+  var root = window['\u2182']
+    , vars = { 'this': true }
+  root.scopes.forEach(function(scope) {
+    scope.vars.forEach(function(v) { vars[v] = true })
+  })
+  Object.keys(window).forEach(function(windowKey) {
+    vars[windowKey] = true
+  })
+  return vars
+}
 
 })()

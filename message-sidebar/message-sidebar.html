@@ -1,0 +1,26 @@
+<html>
+<head>
+  <link rel="stylesheet" href="/vendor/blink/inspectorStyle.css">
+  <link rel="stylesheet" href="/vendor/blink/inspectorCommon.css">
+  <link rel="stylesheet" href="message-sidebar.css">
+</head>
+<body class="view">
+  <div id="message">
+    Page not instrumented. Press
+    <a href="#"
+      id="reloadPage"
+      title="Reload with instrumentation">instrument</a>
+    to reload with an instrumented version of your page.
+  </div>
+  <script src="/vendor/blink/common/utilities.js"></script>
+  <script src="/vendor/blink/common/WebInspector.js"></script>
+  <script src="/vendor/blink/common/Object.js"></script>
+  <script src="/vendor/blink/common/UIString.js"></script>
+  <script src="/vendor/blink/ui/UIUtils.js"></script>
+  <script src="/vendor/blink/Runtime.js"></script>
+  <script src="/vendor/blink/host/InspectorFrontendHost.js"></script>
+  <script src="/vendor/blink/host/Platform.js"></script>
+  <script src="/bus.js"></script>
+  <script src="message-sidebar.js"></script>
+</body>
+</html>

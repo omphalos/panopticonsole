@@ -1,64 +1,68 @@
 (function() { 'use strict'
 
-////////////////////
-// Initialization //
-////////////////////
-
-var isOwnReload = false
-  , sources = chrome.devtools.panels.sources
-  , network = chrome.devtools.network
+var sources = chrome.devtools.panels.sources
   , inspectedWindow = chrome.devtools.inspectedWindow
 
-if(localStorage.autoInstrument === undefined)
-  localStorage.autoInstrument = true
-if(localStorage.cache === undefined)
-  localStorage.cache = true
+///////////////
+// ViewModel //
+///////////////
+
+var viewModel = new PanopticonsoleViewModel({
+  isInstrumented: { render: [renderScopeSidebar, renderPrimarySidebar] },
+  sessionStarted: { render: [renderScopeSidebar, renderPrimarySidebar] },
+  scopeLoc: { render: renderScopeSidebar }
+})
+
+/////////////////////
+// Primary sidebar //
+/////////////////////
+
+var primarySidebar
 
 sources.createSidebarPane(
   'Panopticonsole',
   function(sidebar) {
-    sidebar.setPage("console-sidebar/console-sidebar.html")
-    sidebar.setHeight("100px")
+    primarySidebar = sidebar
+    primarySidebar.setHeight("200px")
   })
 
-////////////////////
-// Locals sidebar //
-////////////////////
+function renderPrimarySidebar() {
+  if(!primarySidebar) return setTimeout(renderPrimarySidebar, 100)
+  primarySidebar.setPage(viewModel.isInstrumented ?
+    'console-sidebar/console-sidebar.html' :
+    'message-sidebar/message-sidebar.html')
+}
 
-var localsSidebar
+bus.on('userCode', function(userCode) {
+  var code = buildRemoteEval(userCode, { log: true })
+  inspectedWindow.eval(code, function(result, error) {
+    if(!error) return
+    var errorString = 'console.error(' + JSON.stringify(error.value) + ')'
+    inspectedWindow.eval(errorString, logIfError)
+  })
+})
+
+///////////////////
+// Scope sidebar //
+///////////////////
+
+var scopeSidebar
+
 sources.createSidebarPane(
-  'Panopticonsole - Locals',
+  'Panopticonsole - Scope Variables',
   function(sidebar) {
-    window.localsSidebar = localsSidebar = sidebar
-    renderLocalsSidebar()
+    scopeSidebar = sidebar
+    scopeSidebar.setHeight("100px")
   })
 
-function detectScopeChange() {
-  var readScope = 'JSON.stringify((' + getScopeLocation + ')())'
-    , code = buildRemoteEval(readScope, { return: true })
-  inspectedWindow.eval(code, function(nextScopeLoc, error) {
-    if(error) return console.error(error)
-    //console.log('nextScopeLoc', nextScopeLoc, 'from', sessionStorage.scopeLoc)
-    if(sessionStorage.scopeLoc === nextScopeLoc) return
-    sessionStorage.scopeLoc = nextScopeLoc
-    renderLocalsSidebar()
-  })
+function renderScopeSidebar() {
+  if(!scopeSidebar) return setTimeout(renderScopeSidebar, 100)
+  var scopeExpression = buildRemoteEval(
+    '(' + getScopeObject + ')()', { return: true })
+  scopeSidebar.setExpression(scopeExpression)
 }
 
-function getScopeLocation() {
-  if(!window['\u2182']) return undefined
-  return window['\u2182'].scopes.filter(function(s) {
-    return s.evalFn
-  })[0].loc
-}
-
-function renderLocalsSidebar() {
-  var localsExpression = buildRemoteEval(
-    '(' + getLocalsObject + ')()', { return: true })
-  localsSidebar.setExpression(localsExpression)
-}
-
-function getLocalsObject() {
+function getScopeObject() {
   if(!window['\u2182'])
     return { '_\u2182': 'Not instrumented' }
   var result = {}
@@ -75,45 +79,39 @@ function getLocalsObject() {
     })
   })
   if(lowestEvalFn !== window.eval && !Object.keys(result).length)
-    result['_\u2182'] = 'No locals found'
+    result['_\u2182'] = 'No scope variables found'
   if(lowestEvalFn === window.eval && !result['_\u2182'])
     result['_\u2182'] = 'Global scope'
   return result
 }
 
-///////////////////////////
-// Storage event handler //
-///////////////////////////
+sources.onSelectionChanged.addListener(function() {
+  var readScope = 'JSON.stringify((' + getScopeLocation + ')())'
+    , code = buildRemoteEval(readScope, { return: true })
+  inspectedWindow.eval(code, function(nextScopeLoc, error) {
+    if(error) return console.error(error)
+    viewModel.scopeLoc = nextScopeLoc
+  })
+})
 
-addEventListener('storage', function(evt) {
-  // Event handling
-  if(evt.key === 'trigger' && evt.newValue === 'reload-page')
-    reloadWithInstrumentation()
-  if(evt.key === 'trigger' && evt.newValue === 'refresh-locals')
-    renderLocalsSidebar()
-  if(evt.key === 'userCode' && evt.newValue) {
-    console.log('executing', evt.newValue)
-    var code = buildRemoteEval(evt.newValue, { log: true })
-    inspectedWindow.eval(code, function(result, error) {
-      if(!error) return
-      var errorString = 'console.error(' + JSON.stringify(error.value) + ')'
-      inspectedWindow.eval(errorString, logIfError)
-    })
-  }
-  // Rendering
-}, false)
+function getScopeLocation() {
+  if(!window['\u2182']) return undefined
+  return window['\u2182'].scopes.filter(function(s) {
+    return s.evalFn
+  })[0].loc
+}
 
-sources.onSelectionChanged.addListener(detectScopeChange)
+bus.on('refreshScopeVariables', renderScopeSidebar)
 
-/////////////////////////////////
-// Handling resource committed //
-/////////////////////////////////
+///////////////////////////////
+// Handle resource committed //
+///////////////////////////////
 
-var instrument = eval(window.getInstrumentCode(false))
+var instrument = eval(window.getInstrumentCode(false /* no cache */))
 
 inspectedWindow.onResourceContentCommitted.addListener(function(res, content) {
   console.log('committed')
-  if(!sessionStorage.isInstrumented) return
+  if(!viewModel.isInstrumented) return
   if(res.type !== 'script') return
   if(endsWith(res.url, '.inst')) return
   // Devtools incorrectly resets location
@@ -134,7 +132,7 @@ function reinstrument(instRes, sourceRes) {
       , setup = instrumented.substring(0, instrumented.indexOf('\u2182;'))
       , urlVar = JSON.stringify(sourceRes.url)
       , code = '(' + removeOldUrlReferences + ')(' + urlVar + ');' + setup
-    inspectedWindow.eval(setup, function(result, error) {
+    inspectedWindow.eval(code, function(result, error) {
       if(error) return console.error(error)
       instRes.setContent(instrumented, true, onContentSet)
     })
@@ -142,7 +140,7 @@ function reinstrument(instRes, sourceRes) {
 
   function onContentSet(result, error) {
     if(error) return console.error(error)
-    renderLocalsSidebar()
+    renderScopeSidebar()
   }
 }
 
@@ -153,7 +151,6 @@ function removeOldUrlReferences(url) {
     var splitAt = key.lastIndexOf('@')
       , refUrl = key.substring(0, splitAt)
     if(refUrl !== url) return
-    console.log('deleting', key)
     delete window['\u2182'][key]
   })
 }
@@ -162,9 +159,11 @@ function removeOldUrlReferences(url) {
 // Reloading //
 ///////////////
 
+var isOwnReload = false
+
 function reloadWithInstrumentation() {
   isOwnReload = true
-  var cache = localStorage.cache === 'true'
+  var cache = viewModel.cache
   inspectedWindow.reload({
     ignoreCache: true,
     userAgent: undefined,
@@ -172,23 +171,17 @@ function reloadWithInstrumentation() {
   })
 }
 
-network.onNavigated.addListener(function() {
+chrome.devtools.network.onNavigated.addListener(function() {
   if(isOwnReload) {
-    //console.log('setting isOwnReload to false')
     isOwnReload = false
-    //console.log('setting isInstrumented to true from', sessionStorage.isInstrumented)
-    sessionStorage.sessionStarted = true
-    sessionStorage.isInstrumented = true
-    renderLocalsSidebar()
-  } else if(sessionStorage.sessionStarted && localStorage.autoInstrument) {
-    //console.log('reloading after uninstrumented navigation')
+    viewModel.sessionStarted = true
+    viewModel.isInstrumented = true
+  } else if(viewModel.sessionStarted && viewModel.autoInstrument)
     reloadWithInstrumentation()
-  } else {
-    //console.log('deleting isInstrumented from', sessionStorage.isInstrumented)
-    delete sessionStorage.isInstrumented
-    renderLocalsSidebar()
-  }
+  else viewModel.isInstrumented = false
 })
+
+bus.on('reloadPage', reloadWithInstrumentation)
 
 ///////////////
 // Utilities //

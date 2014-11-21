@@ -1,6 +1,30 @@
 body { margin: 0; }
 *:focus { outline: none; }
-#message { margin-left: 10px; }
 #console-messages { overflow: auto; }
-#cache-label { margin-left: 6px; }
-.status-bar-item.checkbox { margin-top: 5px; margin-bottom: 3px;}
+#consoleStatusBar { display: block; }
+#settings { float: right; }
+#settingsContainer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 1;
+}
+#settingsView {
+  box-shadow: 1px 1px 5px 2px rgba(128, 128, 128, 0.7);
+  position: absolute;
+  top: 10;
+  right: 10;
+  left: 10;
+  bottom: 10;
+  background-color: white;
+  z-index: 1;
+  padding: 7;
+}
+#settingsView h3 {
+  margin: 0;
+  padding-bottom: 7;
+  border-bottom: 1 solid #eee;
+}
+#closeSettings { float: right; }

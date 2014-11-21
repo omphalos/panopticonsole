@@ -4,7 +4,7 @@ document.addEventListener('mousemove', function(evt) {
   document.getElementById('y').innerHTML = square(evt.y)
 
   function square(a) {
-    return a * a
+    return a * a;
   }
 
   function hypotenuse(a, b) {
